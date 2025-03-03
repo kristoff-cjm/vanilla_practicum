@@ -1,7 +1,7 @@
 ## FAQ
 
 **Q1. Several TODOs say "appropriately". What does that mean? Can you please clarify?**
-
+..
 A1. That's a stupid question because in each case YOU have to make an appropriate decision. That's what you get paid to do. If you can't, the company has no interest in hiring you because you're high maintenance. You applied for a full stack position. If you don't know at least one way to solve a TODO in the vanilla practicum, you shouldn't get the position because you aren't qualified.
 
 **Q2. This isn't industy. We're in school. What does "appropriately" mean in each case? You should teach what's necessary, and then clearly communicate what's expected.**
