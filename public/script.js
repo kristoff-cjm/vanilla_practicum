@@ -1,3 +1,4 @@
+"use strict";
 // TODO: Wire up the app's behavior here.
 // NOTE: The TODOs are listed in index.html
 
@@ -68,7 +69,6 @@ function courseSelected(sel) {
 }
 
 async function handleIdInput(input) {
-  console.log(input.value.length);
   if (input.value.length == 8) {
     const courseSel = document.getElementById('course');
     const courseId = courseSel.options[courseSel.selectedIndex].value;

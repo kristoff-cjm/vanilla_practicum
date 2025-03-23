@@ -3,9 +3,15 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "server": "json-server db.json --routes routes.json"
+    "oldServer": "json-server db.json --routes routes.json",
+    "server": "node server.js --routes routes.json"
   },
   "devDependencies": {
     "json-server": "0.17.0"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "http-errors": "^2.0.0",
+    "uuid": "^11.1.0"
   }
 }
