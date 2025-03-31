@@ -1,7 +1,5 @@
 const createError = require("http-errors")
 const express = require('express')
-const fs = require("fs")
-//const DB = require("./db")
 const path = require("path")
 const { v4: uuidv4 } = require('uuid')
 const app = express()
@@ -9,7 +7,7 @@ const port = 3000
 const mongoose = require("mongoose")
 const mongoURI = process.env.MONGOURI;
 
-const db = mongoose.connect(mongoURI)
+mongoose.connect(mongoURI)
 
 const logSchema = new mongoose.Schema({
   courseId: String,
