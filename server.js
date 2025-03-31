@@ -3,29 +3,29 @@ const express = require('express')
 const fs = require("fs")
 //const DB = require("./db")
 const path = require("path")
-const { v4: uuidv4 } = require('uuid');
+const { v4: uuidv4 } = require('uuid')
 const app = express()
 const port = 3000
+const mongoose = require("mongoose")
+const mongoURI = process.env.MONGOURI;
 
-//console.log(DB)
-//console.log(typeof(DB))
-//const database = new DB();
-const dbPath = path.join(__dirname, 'db.json');
+const db = mongoose.connect(mongoURI)
 
-const getDB = () => {
-  const data = fs.readFileSync(dbPath);
-  return JSON.parse(data);
-};
+const logSchema = new mongoose.Schema({
+  courseId: String,
+  uvuId: String,
+  text: String,
+  id: String,
+  date: Date
+})
 
-const saveDB = (data) => {
-  fs.writeFile(dbPath, JSON.stringify(data, null, 2), (err) => {
-    if (err) {
-      console.error("error writing to file: "+err);
-    } else {
-        console.log("File written successfully\n");
-    }
-});
-};
+const courseSchema = new mongoose.Schema({
+  id: String,
+  display: String
+})
+
+const Log = new mongoose.model("Log", logSchema)
+const Course = new mongoose.model("Course", courseSchema)
 
 app.use(express.static("public"))
 app.use(express.json())
@@ -37,17 +37,13 @@ app.get('/', (req, res) => {
 //post logs
 app.post('/api/v1/logs', async (req, res) => {
   try {
-      const db = getDB();
-      const newLog = req.body;
-
-      if (!newLog.courseId || !newLog.uvuId || !newLog.text || !newLog.date) {
+      const data = req.body
+      if (!data.courseId || !data.uvuId || !data.text || !data.date) {
           return res.status(400).json({ error: 'Missing required fields: courseId, uvuId, text, date' });
       }
-
+      const newLog = new Log(data);
       newLog.id = uuidv4();
-      db.logs = db.logs || [];
-      db.logs.push(newLog); // Add new log entry
-      saveDB(db)
+      await newLog.save()
 
       res.status(201).json({ message: 'Log added successfully', log: newLog })
   } catch (error) {
@@ -59,18 +55,37 @@ app.post('/api/v1/logs', async (req, res) => {
 //get logs
 app.get('/api/v1/logs', async (req, res) => {
   const { courseId, uvuId } = req.query; // Extract query params
-
-  const data = getDB()
-  const logs = data.logs
-  const filteredLogs = logs.filter(log => log.courseId === courseId && log.uvuId === uvuId);
-
-  res.json(filteredLogs);
+  const logs = await Log.find({courseId:courseId,uvuId:uvuId})
+  res.json(logs);
 })
 
 //get courses
 app.get("/api/v1/courses", async (req, res)=>{
-  const db = getDB()
-  res.json(db.courses)
+  const courses = await Course.find({}) //get all courses
+  if(courses.length == 0){
+    //If there are none, seed them with the defaults...
+    const defaultCourses = [
+      {
+        id: "cs3380",
+        display: "CS 3380"
+      },
+      {
+        id: "cs4660",
+        display: "CS 4660"
+      },
+      {
+        id: "cs4690",
+        display: "CS 4690"
+      }
+    ];
+    defaultCourses.forEach(async (course)=>{
+      const newCourse = new Course(course)
+      await newCourse.save()
+    })
+    res.json(defaultCourses)
+    return;
+  }
+  res.json(courses)
 })
 
 // catch 404 and forward to error handler
