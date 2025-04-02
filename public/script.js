@@ -2,6 +2,18 @@
 // TODO: Wire up the app's behavior here.
 // NOTE: The TODOs are listed in index.html
 
+function toggleTheme() {
+  const html = document.querySelector('html');
+  const theme = html.dataset.bsTheme;
+  if (theme == 'light') {
+    html.dataset.bsTheme = 'dark';
+  } else if (theme == 'dark') {
+    html.dataset.bsTheme = 'light';
+  } else {
+    html.dataset.bsTheme = 'dark';
+  }
+}
+
 async function onload() {
   await loadClasses();
 }
@@ -14,6 +26,7 @@ async function loadClasses() {
   const response = await fetch(request);
   const data = await response.json();
   const courseSelect = document.getElementById('course');
+  const courseUl = document.getElementById('coursesList');
 
   for (let i = 0; i < data.length; i++) {
     const course = data[i];
@@ -21,6 +34,9 @@ async function loadClasses() {
     option.value = course.id;
     option.innerHTML = course.display;
     courseSelect.appendChild(option);
+    const li = document.createElement("li");
+    li.textContent = course.display;
+    courseUl.appendChild(li);
   }
 }
 
@@ -33,6 +49,44 @@ async function submitNewLog() {
   const dateString = date.toLocaleString();
 
   await createLog(classId, studentId, logText, dateString);
+}
+
+async function submitNewCourse(){
+  const displayInput = document.getElementById("newCourseDisplay");
+  const idInput = document.getElementById("newCourseId");
+  const courseName = displayInput.value;
+  const courseId = idInput.value;
+  if (courseName == "" || courseId == ""){
+    alert("Need a non-empty display and id for your course");
+    return;
+  }
+  const request = new Request('/api/v1/course', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      id: courseId,
+      display: courseName,
+    }),
+  });
+
+  const response = await fetch(request);
+  if (response.status == 201) {
+    displayInput.value = "";
+    idInput.value = "";
+    const courseSelect = document.getElementById('course');
+    const courseUl = document.getElementById('coursesList');
+
+    const option = document.createElement('option');
+    option.value = courseId;
+    option.innerHTML = courseName;
+    courseSelect.appendChild(option);
+    const li = document.createElement("li");
+    li.textContent = courseName;
+    courseUl.appendChild(li);
+  }
+
 }
 
 async function createLog(classId, studentId, logText, date) {
@@ -101,6 +155,7 @@ async function getStudentLogs(courseId, uvuId) {
       const li = document.createElement('li');
       const div = document.createElement('div');
       const pre = document.createElement('pre');
+      li.classList.add("list-group-item");
       li.addEventListener('click', toggleLog);
       div.innerHTML = item.date;
       pre.innerHTML = item.text;

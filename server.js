@@ -4,6 +4,8 @@ const path = require("path")
 const { v4: uuidv4 } = require('uuid')
 const app = express()
 const port = 3000
+
+//DATABASE Components
 const mongoose = require("mongoose")
 const mongoURI = process.env.MONGOURI;
 
@@ -24,6 +26,7 @@ const courseSchema = new mongoose.Schema({
 
 const Log = new mongoose.model("Log", logSchema)
 const Course = new mongoose.model("Course", courseSchema)
+//
 
 app.use(express.static("public"))
 app.use(express.json())
@@ -55,6 +58,22 @@ app.get('/api/v1/logs', async (req, res) => {
   const { courseId, uvuId } = req.query; // Extract query params
   const logs = await Log.find({courseId:courseId,uvuId:uvuId})
   res.json(logs);
+})
+
+app.post("/api/v1/course", async (req,res) =>{
+  try {
+    const data = req.body
+    if (!data.id || !data.display) {
+        return res.status(400).json({ error: 'Missing required fields: courseId, displayName' });
+    }
+    const newCourse = new Course(data);
+    await newCourse.save()
+
+    res.status(201).json({ message: 'Course added successfully', course: newCourse })
+  } catch (error) {
+      console.error("failed to save course: "+error)
+      res.status(500).json({ error: 'Failed to save course'+error });
+  }
 })
 
 //get courses
