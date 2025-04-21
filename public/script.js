@@ -15,7 +15,24 @@ function toggleTheme() {
 }
 
 async function onload() {
+  await getTenantInfo();
   await loadClasses();
+}
+
+async function getTenantInfo(){
+  const appTitle = document.getElementById("appTitle");
+  try{
+    const request = new Request('/api/v1/tenantInfo', {
+      method: 'GET',
+    })
+    const response = await fetch(request);
+    const data = await response.json();
+    console.log("tenant data:");
+    console.log(data);
+    appTitle.textContent = data.tenant.displayName;
+  }catch(e){
+    appTitle.textContent = "Tenant Not Available";
+  }
 }
 
 async function loadClasses() {
