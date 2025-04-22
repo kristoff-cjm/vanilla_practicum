@@ -6,6 +6,9 @@ const app = express()
 const UVUPort = 3000
 const UofUPort = 4000
 
+const cookieParser = require("cookie-parser");
+app.use(cookieParser());
+
 //DATABASE Components
 const mongoose = require("mongoose")
 const mongoURI = process.env.MONGOURI;
@@ -52,20 +55,37 @@ app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/login.html'));
 });
 
+app.post("/login", (req, res) => {
+  const { username, password } = req.body;
+  const user = User.find({username:username});
+  
+  if (user && user.password === password) {
+      // Login success: set a cookie valid for 14 days
+      res.cookie("authToken", username, {
+          httpOnly: true,
+          maxAge: 1000 * 60 * 60 * 24 * 14, // 14 days
+      });
+      res.status(200).json({ success: true });
+  } else {
+      // Login failed
+      res.status(401).json({ success: false, message: "Invalid username or password" });
+  }
+});
+
 app.use(express.static("public"))
 app.use(express.json())
 
-app.get('/', (req, res) => {
+app.get('/',requireAuth, (req, res) => {
   //already sends index.html by default
 })
 
-app.get('/api/v1/tenantInfo', async(req,res)=>{
+app.get('/api/v1/tenantInfo', requireAuth, async(req,res)=>{
   const tenant = getTenant(req.connection.localPort)
   res.status(201).json({tenant:tenant})
 })
 
 //post logs
-app.post('/api/v1/logs', async (req, res) => {
+app.post('/api/v1/logs', requireAuth, async (req, res) => {
   const tenant = getTenant(req.connection.localPort)
   try {
       const data = req.body
@@ -85,14 +105,14 @@ app.post('/api/v1/logs', async (req, res) => {
 });
 
 //get logs
-app.get('/api/v1/logs', async (req, res) => {
+app.get('/api/v1/logs', requireAuth, async (req, res) => {
   const tenant = getTenant(req.connection.localPort)
   const { courseId, uvuId } = req.query; // Extract query params
   const logs = await Log.find({courseId:courseId,uvuId:uvuId,tenantId:tenant.id})
   res.json(logs);
 })
 
-app.post("/api/v1/course", async (req,res) =>{
+app.post("/api/v1/course", requireAuth, async (req,res) =>{
   try {
     const tenant = getTenant(req.connection.localPort)
     const data = req.body
@@ -111,7 +131,7 @@ app.post("/api/v1/course", async (req,res) =>{
 })
 
 //get courses
-app.get("/api/v1/courses", async (req, res)=>{
+app.get("/api/v1/courses", requireAuth, async (req, res)=>{
   const tenant = getTenant(req.connection.localPort)
   const courses = await Course.find({tenantId:tenant.id}) //get all courses for tenant
   if(courses.length == 0){
@@ -165,19 +185,57 @@ app.use((err, req, res, next) => {
 function getTenant(port){
   if(port === UVUPort){
     return {
-      id: 1,
+      id: "1",
       shortName: "UVU",
       displayName: "Utah Valley University"
     };
   }else if(port === UofUPort){
     return {
-      id: 2,
+      id: "2",
       shortName: "UofU",
       displayName: "University of Utah"
     };
   }else{
     return null;
   }
+}
+
+async function requireAuth(req, res, next) {
+  if (!req.cookies.authToken) {
+    return res.redirect("/login");
+  }
+  
+  const allUsers = await User.find({})
+  if(allUsers.length == 0){
+    //seed the db with basic users
+    const defaultUsers = [
+      {
+        id: "1",
+        username: "root_uvu",
+        password: "willy",
+        tenantId: "1",
+        role: "admin"
+      },
+      {
+        id: "2",
+        username: "root_uofu",
+        password: "swoopy",
+        tenantId: "2",
+        role: "admin"
+      }
+    ];
+    defaultUsers.forEach(async (user)=>{
+      const newUser = new User(user)
+      await newUser.save()
+    })
+  }
+  
+  const user = await User.find({username:req.cookies.authToken});
+
+  if(!user){
+    return res.redirect("/login");
+  }
+  next();
 }
 
 app.listen(UofUPort, () => {
