@@ -1,7 +1,7 @@
 "use strict";
 
 async function loadAdmin() {
-    await getTenantInfo();
+    //await getTenantInfo();
     await loadCourses();
     await loadLogs();
 }
@@ -85,9 +85,7 @@ async function loadLogs() {
     if (response.ok) {
         //update
         const data = await response.json();
-        document.getElementById('uvuIdDisplay').innerHTML =
-            'Student Logs for ' + uvuId;
-        const parent = document.getElementById('logs');
+        const parent = document.getElementById('adminLogs');
         parent.innerHTML = '';
         for (let i = 0; i < data.length; i++) {
             const item = data[i];

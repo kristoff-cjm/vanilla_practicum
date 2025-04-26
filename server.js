@@ -20,7 +20,7 @@ mongoose.connect(mongoURI)
 
 const logSchema = new mongoose.Schema({
   courseId: String,
-  uvuId: String,
+  studentId: String,
   tenantId: String,
   text: String,
   id: String,
@@ -35,6 +35,7 @@ const courseSchema = new mongoose.Schema({
 
 const userSchema = new mongoose.Schema({
   id: String,
+  studentId: String,
   tenantId: String,
   username: String,
   role: String,
@@ -128,8 +129,8 @@ app.post('/api/v1/logs', requireAuth, async (req, res) => {
   const tenant = getTenant(req.connection.localPort)
   try {
       const data = req.body
-      if (!data.courseId || !data.uvuId || !data.text || !data.date) {
-          return res.status(400).json({ error: 'Missing required fields: courseId, uvuId, text, date' });
+      if (!data.courseId || !data.studentId || !data.text || !data.date) {
+          return res.status(400).json({ error: 'Missing required fields: courseId, studentId, text, date' });
       }
       const newLog = new Log(data);
       newLog.id = uuidv4();
@@ -146,8 +147,14 @@ app.post('/api/v1/logs', requireAuth, async (req, res) => {
 //get logs
 app.get('/api/v1/logs', requireAuth, async (req, res) => {
   const tenant = getTenant(req.connection.localPort)
-  const { courseId, uvuId } = req.query; // Extract query params
-  const logs = await Log.find({courseId:courseId,uvuId:uvuId,tenantId:tenant.id})
+  const { courseId, studentId } = req.query; // Extract query params
+  const logs = await Log.find({courseId:courseId,studentId:studentId,tenantId:tenant.id})
+  res.json(logs);
+})
+
+app.get('/api/v1/adminLogs', requireAuth("admin"), async (req, res) => {
+  const tenant = getTenant(req.connection.localPort)
+  const logs = await Log.find({tenantId:tenant.id})
   res.json(logs);
 })
 
