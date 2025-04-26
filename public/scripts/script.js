@@ -25,7 +25,7 @@ async function getTenantInfo(){
     const request = new Request('/api/v1/tenantInfo', {
       method: 'GET',
     })
-    const response = await fetch(request);
+    const response = await authFetch(request);
     const data = await response.json();
     console.log("tenant data:");
     console.log(data);
@@ -40,7 +40,7 @@ async function loadClasses() {
     method: 'GET',
   });
 
-  const response = await fetch(request);
+  const response = await authFetch(request);
   const data = await response.json();
   const courseSelect = document.getElementById('course');
   const courseUl = document.getElementById('coursesList');
@@ -88,7 +88,7 @@ async function submitNewCourse(){
     }),
   });
 
-  const response = await fetch(request);
+  const response = await authFetch(request);
   if (response.status == 201) {
     displayInput.value = "";
     idInput.value = "";
@@ -120,7 +120,7 @@ async function createLog(classId, studentId, logText, date) {
     }),
   });
 
-  const response = await fetch(request);
+  const response = await authFetch(request);
   if (response.status == 201) {
     const courseSel = document.getElementById('course');
     const courseId = courseSel.options[courseSel.selectedIndex].value;
@@ -159,7 +159,7 @@ async function getStudentLogs(courseId, uvuId) {
       method: 'GET',
     }
   );
-  const response = await fetch(request);
+  const response = await authFetch(request);
   if (response.status == 200 || response.status == 304) {
     //update
     const data = await response.json();
@@ -183,6 +183,39 @@ async function getStudentLogs(courseId, uvuId) {
   } else {
     document.getElementById('uvuIdDisplay').innerHTML =
       'UserId not found in this course.';
+  }
+}
+
+async function authFetch(request) {
+  try {
+      const response = await fetch(request);
+
+      if (response.status === 401){
+        throw new Error("Unauthorized");
+      }
+
+      // Check for JSON and success
+      if (response.ok) {
+          return response;
+      }
+
+      // If not JSON or unauthorized, redirect to login
+      throw new Error("Unauthorized or invalid content type");
+
+  } catch (err) {
+      console.warn("authFetch failed:", err.message);
+      // Try to fetch and render the login page
+      try {
+          const loginResponse = await fetch("/login");
+          const loginHtml = await loginResponse.text();
+          document.documentElement.innerHTML = loginHtml;
+      } catch (e) {
+          console.error("Failed to load login page:", e);
+          alert("Authentication failed and login page could not be loaded.");
+      }
+
+      // Stop further JS execution
+      throw new Error("Authentication required");
   }
 }
 

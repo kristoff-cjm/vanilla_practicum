@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Login</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
+
 <body class="bg-light">
 
     <div class="container d-flex vh-100">
@@ -38,20 +40,43 @@
         e.preventDefault();
         const username = document.getElementById("username").value;
         const password = document.getElementById("password").value;
-    
-        const res = await fetch("/login", {
-            method: "POST",
+
+
+        console.log("username: " + username);
+        console.log("password: " + password)
+        const request = new Request('/login', {
+            method: 'POST',
             headers: {
-                "Content-Type": "application/json",
+                'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ username:username, password:password })
+            body: JSON.stringify({
+                username: username,
+                password: password,
+            }),
         });
-    
-        if (res.ok) {
-            window.location.href = "/";
+
+        const response = await fetch(request);
+
+        if (response.ok) {
+            const data = await response.json();
+            switch (data.role) {
+                case 'admin':
+                    window.location.href = '/admin';
+                    break;
+                case 'teacher':
+                    window.location.href = '/teacher';
+                    break;
+                case 'student':
+                    window.location.href = '/student';
+                    break;
+                default:
+                    alert('Unknown role. Contact support.');
+                    break;
+            }
         } else {
             alert("Login failed. Try again.");
         }
     });
-    </script>
+</script>
+
 </html>

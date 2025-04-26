@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <title>Admin Dashboard</title>
+  <meta charset="UTF-8">
+  <link rel="icon" href="https://www.uvu.edu/favicon.ico" type="image/x-icon">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body onload="loadAdmin()" class="col-10 col-md-6 mx-auto my-5 p-3 border rounded">
+
+  <h1 class="mb-4">Admin Dashboard</h1>
+
+  <h2 class="mb-3">All Courses</h2>
+  <ul id="adminCourses" class="list-group mb-4">
+    <!-- dynamically loaded courses -->
+  </ul>
+
+  <h2 class="mb-3">All Logs</h2>
+  <ul id="adminLogs" class="list-group mb-4">
+    <!-- dynamically loaded logs -->
+  </ul>
+
+  <h2 class="mb-3">Create New User</h2>
+  <input id="newUserId" type="text" class="form-control mb-2" placeholder="Username">
+  <input id="newUserPassword" type="password" class="form-control mb-2" placeholder="Password">
+  <select id="newUserRole" class="form-select mb-3">
+    <option selected disabled>Select Role</option>
+    <option value="student">Student</option>
+    <option value="teacher">Teacher</option>
+  </select>
+  <div class="d-grid mb-4">
+    <button class="btn btn-success" onclick="createUser()">Create User</button>
+  </div>
+
+  <script src="script_admin.js"></script>
+</body>
+</html>

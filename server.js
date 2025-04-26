@@ -9,6 +9,9 @@ const UofUPort = 4000
 const cookieParser = require("cookie-parser");
 app.use(cookieParser());
 
+app.use(express.static("public"))
+app.use(express.json())
+
 //DATABASE Components
 const mongoose = require("mongoose")
 const mongoURI = process.env.MONGOURI;
@@ -43,6 +46,7 @@ const Course = new mongoose.model("Course", courseSchema)
 const User = new mongoose.model("User", userSchema)
 //
 
+/*
 app.use((req, res, next) => {
   const isAuthenticated = req.cookies?.authToken; // Adjust based on your auth system
   if (!isAuthenticated && req.path !== '/login') {
@@ -50,30 +54,65 @@ app.use((req, res, next) => {
   }
   next();
 });
+*/
+
+//Routes
 
 app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/login.html'));
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
-app.post("/login", (req, res) => {
+
+app.get('/student', requireAuth('student'), (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'student.html'));
+});
+
+app.get('/teacher', requireAuth('teacher'), (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'teacher.html'));
+});
+
+app.get('/admin', requireAuth('admin'), (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
+
+app.post("/login", async (req, res) => {
   const { username, password } = req.body;
-  const user = User.find({username:username});
-  
-  if (user && user.password === password) {
-      // Login success: set a cookie valid for 14 days
-      res.cookie("authToken", username, {
-          httpOnly: true,
-          maxAge: 1000 * 60 * 60 * 24 * 14, // 14 days
-      });
-      res.status(200).json({ success: true });
-  } else {
-      // Login failed
-      res.status(401).json({ success: false, message: "Invalid username or password" });
+
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Missing required fields: username, password' });
   }
+
+  const totalUsers = await User.countDocuments();
+  if (totalUsers === 0) {
+    await seedUserDB();
+  }
+
+  const user = await User.findOne({ username });
+
+  if (!user) {
+    console.log("User not found");
+    return res.status(401).json({ success: false, message: "Invalid username or password" });
+  }
+
+  if (user.password !== password) {
+    console.log("Incorrect password");
+    return res.status(401).json({ success: false, message: "Invalid username or password" });
+  }
+
+  // Login success
+  res.cookie("authToken", username, {
+    httpOnly: true,
+    maxAge: 1000 * 60 * 60 * 24 * 14, // 14 days
+  });
+
+  console.log(`User ${username} logged in as ${user.role}`);
+
+  return res.status(200).json({ success: true, role: user.role });
 });
 
-app.use(express.static("public"))
-app.use(express.json())
+
+
 
 app.get('/',requireAuth, (req, res) => {
   //already sends index.html by default
@@ -200,42 +239,58 @@ function getTenant(port){
   }
 }
 
-async function requireAuth(req, res, next) {
-  if (!req.cookies.authToken) {
-    return res.redirect("/login");
-  }
-  
-  const allUsers = await User.find({})
-  if(allUsers.length == 0){
-    //seed the db with basic users
-    const defaultUsers = [
-      {
-        id: "1",
-        username: "root_uvu",
-        password: "willy",
-        tenantId: "1",
-        role: "admin"
-      },
-      {
-        id: "2",
-        username: "root_uofu",
-        password: "swoopy",
-        tenantId: "2",
-        role: "admin"
-      }
-    ];
-    defaultUsers.forEach(async (user)=>{
-      const newUser = new User(user)
-      await newUser.save()
-    })
-  }
-  
-  const user = await User.find({username:req.cookies.authToken});
+async function seedUserDB(){
+  console.log("seeding database");
+  const defaultUsers = [
+    {
+      id: "1",
+      username: "root_uvu",
+      password: "willy",
+      tenantId: "1",
+      role: "admin"
+    },
+    {
+      id: "2",
+      username: "root_uofu",
+      password: "swoopy",
+      tenantId: "2",
+      role: "admin"
+    }
+  ];
+  defaultUsers.forEach(async (user)=>{
+    const newUser = new User(user)
+    await newUser.save()
+  })
+}
 
-  if(!user){
-    return res.redirect("/login");
-  }
-  next();
+function requireAuth(requiredRole = null) {
+  return async function (req, res, next) {
+    console.log("checking auth...");
+
+    // Authenticate
+    if (!req.cookies.authToken) {
+      console.log("no authToken...");
+      return res.status(401).json({ error: 'No authToken' });
+    }
+
+    const user = await User.findOne({ username: req.cookies.authToken });
+
+    if (!user) {
+      console.log("no such user...");
+      return res.status(401).json({ error: 'Invalid authToken' });
+    }
+
+    // Authorize
+    if (requiredRole && user.role !== requiredRole) {
+      console.log(`User role ${user.role} not authorized for ${requiredRole}`);
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    req.user = user;
+
+    console.log("continuing with request...");
+    next();
+  };
 }
 
 app.listen(UofUPort, () => {
