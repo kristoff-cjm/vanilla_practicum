@@ -6,33 +6,102 @@
   <link rel="icon" href="https://www.uvu.edu/favicon.ico" type="image/x-icon">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body onload="loadAdmin()" class="col-10 col-md-6 mx-auto my-5 p-3 border rounded">
+<body onload="loadAdmin()" class="col-10 col-md-8 mx-auto my-5 p-3 border rounded">
 
   <h1 class="mb-4">Admin Dashboard</h1>
 
-  <h2 class="mb-3">All Courses</h2>
-  <ul id="adminCourses" class="list-group mb-4">
-    <!-- dynamically loaded courses -->
+  <!-- Nav tabs -->
+  <ul class="nav nav-tabs mb-4" id="adminTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="courses-tab" data-bs-toggle="tab" data-bs-target="#courses" type="button" role="tab">Courses</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="logs-tab" data-bs-toggle="tab" data-bs-target="#logs" type="button" role="tab">Logs</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="users-tab" data-bs-toggle="tab" data-bs-target="#users" type="button" role="tab">Users</button>
+    </li>
   </ul>
 
-  <h2 class="mb-3">All Logs</h2>
-  <ul id="adminLogs" class="list-group mb-4">
-    <!-- dynamically loaded logs -->
-  </ul>
+  <!-- Tab panes -->
+  <div class="tab-content" id="adminTabsContent">
+    <!-- Courses Tab -->
+    <div class="tab-pane fade show active" id="courses" role="tabpanel">
+      <h2 class="mb-3">All Courses</h2>
+      <ul id="adminCourses" class="list-group mb-3">
+        <!-- dynamically loaded courses -->
+      </ul>
 
-  <h2 class="mb-3">Create New User</h2>
-  <input id="newUserId" type="text" class="form-control mb-2" placeholder="Username">
-  <input id="newUserPassword" type="password" class="form-control mb-2" placeholder="Password">
-  <select id="newUserRole" class="form-select mb-3">
-    <option selected disabled>Select Role</option>
-    <option value="student">Student</option>
-    <option value="teacher">Teacher</option>
-  </select>
-  <div class="d-grid mb-4">
-    <button class="btn btn-success" onclick="createUser()">Create User</button>
+      <h4 class="mt-4">Add New Course</h4>
+      <input id="newCourseDisplay" type="text" class="form-control mb-2" placeholder="Course Name (Display)">
+      <input id="newCourseId" type="text" class="form-control mb-2" placeholder="Course ID">
+      <div class="d-grid">
+        <button class="btn btn-success" onclick="createCourse()">Create Course</button>
+      </div>
+    </div>
+
+    <!-- Logs Tab -->
+    <div class="tab-pane fade" id="logs" role="tabpanel">
+      <h2 class="mb-3">All Logs</h2>
+      <table class="table">
+        <thead>
+          <tr>
+            <td>CourseId</td>
+            <td>StudentId</td>
+            <td>Date</td>
+            <td>Log</td>
+          </tr>
+        </thead>
+        <tbody id="adminLogs">
+
+        </tbody>
+      </table>
+      <ul id="adminLogs" class="list-group mb-3">
+        
+      </ul>
+
+      <h4 class="mt-4">Add New Log</h4>
+      <select id="logCourseSelect" class="form-select mb-2">
+        
+      </select>
+      <textarea id="logText" class="form-control mb-2" placeholder="Log Text"></textarea>
+      <div class="d-grid">
+        <button class="btn btn-success" onclick="createLog()">Add Log</button>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="users" role="tabpanel">
+      <h2>Users</h2>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Student ID</th>
+            <th>Username</th>
+            <th>Role</th>
+          </tr>
+        </thead>
+        <tbody id="usersList">
+          <!-- users loaded here -->
+        </tbody>
+      </table>
+      <h4 class="mb-3">Create New User</h4>
+      <input id="newUserStudentId" type="text" class="form-control mb-2" placeholder="StudentId">
+      <input id="newUserId" type="text" class="form-control mb-2" placeholder="Username">
+      <input id="newUserPassword" type="password" class="form-control mb-2" placeholder="Password">
+      <select id="newUserRole" class="form-select mb-2">
+        <option selected disabled>Select Role</option>
+        <option value="student">Student</option>
+        <option value="teacher">Teacher</option>
+      </select>
+      <div class="d-grid mb-4">
+        <button class="btn btn-success" onclick="createUser()">Create User</button>
+      </div>
+    </div>
   </div>
 
   <script src="scripts/common.js"></script>
   <script src="scripts/script_admin.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+

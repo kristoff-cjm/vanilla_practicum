@@ -13,6 +13,7 @@ function toggleTheme() {
 }
 
 async function authFetch(request) {
+  console.log("auth fetching");
   try {
     const response = await fetch(request);
 
@@ -21,6 +22,10 @@ async function authFetch(request) {
     }
 
     if (response.ok) {
+      return response;
+    }
+
+    if(response.status === 404){
       return response;
     }
 

@@ -30,7 +30,9 @@ const logSchema = new mongoose.Schema({
 const courseSchema = new mongoose.Schema({
   id: String,
   tenantId: String,
-  display: String
+  display: String,
+  userId: String,
+  students: [String]
 })
 
 const userSchema = new mongoose.Schema({
@@ -45,17 +47,6 @@ const userSchema = new mongoose.Schema({
 const Log = new mongoose.model("Log", logSchema)
 const Course = new mongoose.model("Course", courseSchema)
 const User = new mongoose.model("User", userSchema)
-//
-
-/*
-app.use((req, res, next) => {
-  const isAuthenticated = req.cookies?.authToken; // Adjust based on your auth system
-  if (!isAuthenticated && req.path !== '/login') {
-      return res.redirect('/login');
-  }
-  next();
-});
-*/
 
 //Routes
 
@@ -112,20 +103,13 @@ app.post("/login", async (req, res) => {
   return res.status(200).json({ success: true, role: user.role });
 });
 
-
-
-
-app.get('/',requireAuth, (req, res) => {
-  //already sends index.html by default
-})
-
-app.get('/api/v1/tenantInfo', requireAuth, async(req,res)=>{
+app.get('/api/v1/tenantInfo', requireAuth(), async(req,res)=>{
   const tenant = getTenant(req.connection.localPort)
   res.status(201).json({tenant:tenant})
 })
 
 //post logs
-app.post('/api/v1/logs', requireAuth, async (req, res) => {
+app.post('/api/v1/logs', requireAuth(), async (req, res) => {
   const tenant = getTenant(req.connection.localPort)
   try {
       const data = req.body
@@ -145,10 +129,10 @@ app.post('/api/v1/logs', requireAuth, async (req, res) => {
 });
 
 //get logs
-app.get('/api/v1/logs', requireAuth, async (req, res) => {
+app.get('/api/v1/logs', requireAuth(), async (req, res) => {
   const tenant = getTenant(req.connection.localPort)
-  const { courseId, studentId } = req.query; // Extract query params
-  const logs = await Log.find({courseId:courseId,studentId:studentId,tenantId:tenant.id})
+  const { courseId } = req.query;
+  const logs = await Log.find({courseId:courseId,studentId:req.user.studentId,tenantId:tenant.id})
   res.json(logs);
 })
 
@@ -158,7 +142,13 @@ app.get('/api/v1/adminLogs', requireAuth("admin"), async (req, res) => {
   res.json(logs);
 })
 
-app.post("/api/v1/course", requireAuth, async (req,res) =>{
+app.get('/api/v1/teacherLogs', requireAuth("teacher"), async (req, res) => {
+  const tenant = getTenant(req.connection.localPort)
+  const logs = await Log.find({tenantId:tenant.id, userId:req.user.id})
+  res.json(logs);
+})
+
+app.post("/api/v1/course", requireAuth(), async (req,res) =>{
   try {
     const tenant = getTenant(req.connection.localPort)
     const data = req.body
@@ -167,6 +157,7 @@ app.post("/api/v1/course", requireAuth, async (req,res) =>{
     }
     const newCourse = new Course(data);
     newCourse.tenantId = tenant.id;
+    newCourse.userId = req.user.id;
     await newCourse.save()
 
     res.status(201).json({ message: 'Course added successfully', course: newCourse })
@@ -177,9 +168,13 @@ app.post("/api/v1/course", requireAuth, async (req,res) =>{
 })
 
 //get courses
-app.get("/api/v1/courses", requireAuth, async (req, res)=>{
+app.get("/api/v1/courses", requireAuth(), async (req, res)=>{
+  console.log("getting courses")
   const tenant = getTenant(req.connection.localPort)
+  console.log("tenant: "+tenant);
   const courses = await Course.find({tenantId:tenant.id}) //get all courses for tenant
+  console.log("courses")
+  console.log(courses);
   if(courses.length == 0){
     //If there are none, seed them with the defaults...
     const defaultCourses = [
@@ -208,6 +203,152 @@ app.get("/api/v1/courses", requireAuth, async (req, res)=>{
   }
   res.json(courses)
 })
+
+app.get("/api/v1/studentCourses", requireAuth("student"), async (req, res) => {
+  const tenant = getTenant(req.connection.localPort);
+  const user = req.user;
+  
+  if (!user) {
+    return res.status(401).json({ error: "User not found" });
+  }
+
+  const courses = await Course.find({ tenantId: tenant.id, students: user.studentId });
+  
+  if (!courses || courses.length === 0) {
+    return res.status(404).json({ message: "No courses found for this student." });
+  }
+
+  res.json(courses);
+});
+
+
+app.get("/api/v1/teacher_courses", requireAuth("teacher"), async (req, res)=>{
+  const tenant = getTenant(req.connection.localPort);
+  const courses = await Course.find({tenantId:tenant.id,userId:req.user.id})
+  res.json(courses);
+})
+
+app.get("/api/v1/users", requireAuth("admin"), async (req, res)=>{
+  const tenant = getTenant(req.connection.localPort);
+  console.log("tenant: "+tenant);
+  const users = await User.find({tenantId:tenant.id});
+  console.log("users");
+  console.log(users)
+  const userData = users.map(({ studentId, username, role }) => ({
+    studentId,
+    username,
+    role
+  }));
+  console.log(users)
+  res.json(userData);
+})
+
+app.get("/api/v1/students", requireAuth('teacher'), async (req, res) => {
+  try {
+    const tenant = getTenant(req.connection.localPort);
+    const students = await User.find({ tenantId: tenant.id, role: 'student' }, 'studentId username role');
+    res.json(students);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load students' });
+  }
+});
+
+
+app.post("/api/v1/user", requireAuth('admin'), async (req, res) => {
+  console.log("Creating new user...");
+  
+  const { studentId, username, role, password } = req.body;
+  
+  if (!username || !role || !password) {
+    return res.status(400).json({ error: "Username, role, and password are required" });
+  }
+
+  try {
+    const tenant = getTenant(req.connection.localPort);
+
+    const newUser = new User({
+      tenantId: tenant.id,
+      studentId: studentId || "",
+      username,
+      role,
+      password,
+    });
+
+    await newUser.save();
+    res.status(201).json({ message: "User created successfully" });
+  } catch (error) {
+    console.error("Error creating user:", error);
+    res.status(500).json({ error: "Failed to create user" });
+  }
+});
+
+app.post("/api/v1/course/:courseId/addStudent", requireAuth('teacher'), async (req, res) => {
+  const { studentId } = req.body;
+  const { courseId } = req.params;
+  const tenant = getTenant(req.connection.localPort);
+
+  if (!studentId) {
+    return res.status(400).json({ error: 'Missing studentId' });
+  }
+
+  const course = await Course.findOne({ id: courseId, tenantId: tenant.id });
+  if (!course) {
+    return res.status(404).json({ error: 'Course not found' });
+  }
+
+  if (!course.students.includes(studentId)) {
+    course.students.push(studentId);
+    await course.save();
+  }
+
+  res.json(course);
+});
+
+app.post("/api/v1/course/:courseId/removeStudent", requireAuth('teacher'), async (req, res) => {
+  const { studentId } = req.body;
+  const { courseId } = req.params;
+  const tenant = getTenant(req.connection.localPort);
+
+  if (!studentId) {
+    return res.status(400).json({ error: 'Missing studentId' });
+  }
+
+  const course = await Course.findOne({ id: courseId, tenantId: tenant.id });
+  if (!course) {
+    return res.status(404).json({ error: 'Course not found' });
+  }
+
+  course.students = course.students.filter(id => id !== studentId);
+  await course.save();
+
+  res.json(course);
+});
+
+app.get("/api/v1/courses/:courseId/students", requireAuth("teacher"), async (req, res) => {
+  const courseId = req.params.courseId;
+  const tenant = getTenant(req.connection.localPort);
+
+  try {
+    const course = await Course.findOne({ id: courseId, tenantId: tenant.id });
+    if (!course) {
+      return res.status(404).json({ error: "Course not found" });
+    }
+    const studentIds = course.students || [];
+    if (studentIds.length === 0) {
+      return res.json([]);
+    }
+    const students = await User.find({ studentId: { $in: studentIds }, tenantId: tenant.id, role: "student" })
+      .select('studentId username role');
+
+
+    res.json(students);
+  } catch (err) {
+    console.error("Error fetching students for course", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
