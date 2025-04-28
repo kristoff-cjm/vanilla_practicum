@@ -1,24 +1,10 @@
 "use strict";
 
 async function loadAdmin() {
-    //await getTenantInfo();
+    await getTenantInfo();
     await loadCourses();
     await loadLogs();
     await loadUsers();
-}
-
-async function getTenantInfo() {
-    const appTitle = document.getElementById("appTitle");
-    try {
-        const request = new Request('/api/v1/tenantInfo', { method: 'GET' });
-        const response = await authFetch(request);
-        const data = await response.json();
-        console.log("tenant data:");
-        console.log(data);
-        appTitle.textContent = data.tenant.displayName;
-    } catch (e) {
-        appTitle.textContent = "Tenant Not Available";
-    }
 }
 
 async function createCourse() {

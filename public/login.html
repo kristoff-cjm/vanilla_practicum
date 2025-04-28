@@ -41,9 +41,6 @@
         const username = document.getElementById("username").value;
         const password = document.getElementById("password").value;
 
-
-        console.log("username: " + username);
-        console.log("password: " + password)
         const request = new Request('/login', {
             method: 'POST',
             headers: {

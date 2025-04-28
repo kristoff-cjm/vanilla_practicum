@@ -1,5 +1,33 @@
 "use strict";
 
+async function getTenantInfo(){
+  try {
+    const request = new Request('/api/v1/tenantInfo', { method: 'GET' });
+    const response = await authFetch(request);
+    const data = await response.json();
+    var tenant = data.tenant;
+  } catch (e) {
+    return null;
+  }
+  
+  if(tenant.id == "1"){
+    //uvu
+    tenant.favicon = "https://www.uvu.edu/favicon.ico";
+    tenant.image = "/images/uvu_monogram.png";
+  }else if(tenant.id == "2"){
+    //uofu
+    tenant.favicon = "https://brand.utah.edu/wp-content/themes/umctheme3/favicon-32x32.png";
+    tenant.image = "/images/uofu_monogram.png";
+  }
+  
+  const image = document.createElement("img");
+  image.src = tenant.image;
+  image.height = 100;
+  const themeDiv = document.getElementById("tenantTheme");
+  themeDiv.appendChild(image);
+  document.getElementById("favicon").href = tenant.favicon;
+}
+
 function toggleTheme() {
   const html = document.querySelector('html');
   const theme = html.dataset.bsTheme;

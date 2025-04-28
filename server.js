@@ -49,6 +49,10 @@ const User = new mongoose.model("User", userSchema)
 
 //Routes
 
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
 app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
@@ -375,7 +379,6 @@ app.get("/api/v1/courses/:courseId/students", requireAuth("teacher"), async (req
     res.status(500).json({ error: "Internal server error" });
   }
 });
-
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

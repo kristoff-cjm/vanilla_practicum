@@ -1,21 +1,10 @@
 "use strict";
 
 async function loadTeacher(){
+  await getTenantInfo();
   await loadCourses();
   await loadStudents();
   await loadLogs();
-}
-
-async function getTenantInfo() {
-  const appTitle = document.getElementById("appTitle");
-  try {
-    const request = new Request('/api/v1/tenantInfo', { method: 'GET' });
-    const response = await authFetch(request);
-    const data = await response.json();
-    appTitle.textContent = data.tenant.displayName;
-  } catch (e) {
-    appTitle.textContent = "Tenant Not Available";
-  }
 }
 
 async function loadCourses() {
