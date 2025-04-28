@@ -13,7 +13,6 @@ function toggleTheme() {
 }
 
 async function authFetch(request) {
-  console.log("auth fetching");
   try {
     const response = await fetch(request);
 

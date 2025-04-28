@@ -40,7 +40,7 @@
       <h2 class="mb-3">My Logs</h2>
 
       <!-- Course selector for new logs -->
-      <select id="logCourseSelect" class="form-select mb-3" onchange="loadLogsForCourse()">
+      <select id="logCourseSelect" class="form-select mb-3" onchange="loadLogsForCourse(this.options[this.selectedIndex].value)">
         <option selected disabled>Choose a course</option>
         <!-- dynamically loaded course options -->
       </select>

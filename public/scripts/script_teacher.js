@@ -12,8 +12,6 @@ async function getTenantInfo() {
     const request = new Request('/api/v1/tenantInfo', { method: 'GET' });
     const response = await authFetch(request);
     const data = await response.json();
-    console.log("tenant data:");
-    console.log(data);
     appTitle.textContent = data.tenant.displayName;
   } catch (e) {
     appTitle.textContent = "Tenant Not Available";
@@ -68,7 +66,6 @@ async function loadCourseStudents(courseId) {
   const request = new Request(`/api/v1/courses/${courseId}/students`, { method: 'GET' });
   const response = await authFetch(request);
   const students = await response.json();
-  console.log(students);
 
   const studentList = document.getElementById(`students-${courseId}`);
   studentList.innerHTML = "";

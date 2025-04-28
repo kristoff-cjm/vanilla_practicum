@@ -76,11 +76,11 @@ async function loadCourses() {
     console.log("getting courses");
 
     const response = await authFetch(request);
-    console.log(response);
     const data = await response.json();
-    console.log(data);
     const courseUl = document.getElementById('adminCourses');
     courseUl.innerHTML = "";
+    const logCourseSelect = document.getElementById('logCourseSelect');
+    logCourseSelect.innerHTML = "";
 
     for (let i = 0; i < data.length; i++) {
         const course = data[i];
@@ -95,7 +95,7 @@ async function loadCourses() {
         const option = document.createElement("option");
         option.value = course.id;
         option.textContent = course.display;
-        const logCourseSelect = document.getElementById('logCourseSelect');
+        
         logCourseSelect.appendChild(option);
     }
 }
@@ -103,7 +103,7 @@ async function loadCourses() {
 async function createUser() {
     const username = document.getElementById('newUserId').value.trim();
     const password = document.getElementById('newUserPassword').value;
-    const studentId = document.getElementById('newUserStudentId').value;
+    let studentId = document.getElementById('newUserStudentId').value;
     const roleSelect = document.getElementById('newUserRole');
     const role = roleSelect.options[roleSelect.selectedIndex].value;
 

@@ -36,7 +36,6 @@ const courseSchema = new mongoose.Schema({
 })
 
 const userSchema = new mongoose.Schema({
-  id: String,
   studentId: String,
   tenantId: String,
   username: String,
@@ -69,6 +68,7 @@ app.get('/admin', requireAuth('admin'), (req, res) => {
 
 
 app.post("/login", async (req, res) => {
+  console.log("attempting login");
   const { username, password } = req.body;
 
   if (!username || !password) {
@@ -104,15 +104,25 @@ app.post("/login", async (req, res) => {
 });
 
 app.get('/api/v1/tenantInfo', requireAuth(), async(req,res)=>{
+  console.log("getting tenant info")
   const tenant = getTenant(req.connection.localPort)
   res.status(201).json({tenant:tenant})
 })
 
 //post logs
 app.post('/api/v1/logs', requireAuth(), async (req, res) => {
-  const tenant = getTenant(req.connection.localPort)
+  console.log("adding log") //admin, student
+  const tenant = getTenant(req.connection.localPort);
   try {
       const data = req.body
+
+      if (!data.studentId) {
+        if(!req.user.studentId){
+          return res.status(400).json({ error: 'Missing studentId' });
+        }
+        data.studentId = req.user.studentId;
+      }
+
       if (!data.courseId || !data.studentId || !data.text || !data.date) {
           return res.status(400).json({ error: 'Missing required fields: courseId, studentId, text, date' });
       }
@@ -129,7 +139,8 @@ app.post('/api/v1/logs', requireAuth(), async (req, res) => {
 });
 
 //get logs
-app.get('/api/v1/logs', requireAuth(), async (req, res) => {
+app.get('/api/v1/logs', requireAuth("student"), async (req, res) => {
+  console.log("getting logs") //student
   const tenant = getTenant(req.connection.localPort)
   const { courseId } = req.query;
   const logs = await Log.find({courseId:courseId,studentId:req.user.studentId,tenantId:tenant.id})
@@ -137,18 +148,21 @@ app.get('/api/v1/logs', requireAuth(), async (req, res) => {
 })
 
 app.get('/api/v1/adminLogs', requireAuth("admin"), async (req, res) => {
+  console.log("getting logs as admin") //admin
   const tenant = getTenant(req.connection.localPort)
   const logs = await Log.find({tenantId:tenant.id})
   res.json(logs);
 })
 
 app.get('/api/v1/teacherLogs', requireAuth("teacher"), async (req, res) => {
+  console.log("getting logs as teacher") //teacher
   const tenant = getTenant(req.connection.localPort)
-  const logs = await Log.find({tenantId:tenant.id, userId:req.user.id})
+  const logs = await Log.find({tenantId:tenant.id, userId:req.user._id})
   res.json(logs);
 })
 
 app.post("/api/v1/course", requireAuth(), async (req,res) =>{
+  console.log("posting course"); //admin,teacher
   try {
     const tenant = getTenant(req.connection.localPort)
     const data = req.body
@@ -157,7 +171,7 @@ app.post("/api/v1/course", requireAuth(), async (req,res) =>{
     }
     const newCourse = new Course(data);
     newCourse.tenantId = tenant.id;
-    newCourse.userId = req.user.id;
+    newCourse.userId = req.user._id;
     await newCourse.save()
 
     res.status(201).json({ message: 'Course added successfully', course: newCourse })
@@ -169,12 +183,9 @@ app.post("/api/v1/course", requireAuth(), async (req,res) =>{
 
 //get courses
 app.get("/api/v1/courses", requireAuth(), async (req, res)=>{
-  console.log("getting courses")
+  console.log("getting courses")//admin,
   const tenant = getTenant(req.connection.localPort)
-  console.log("tenant: "+tenant);
   const courses = await Course.find({tenantId:tenant.id}) //get all courses for tenant
-  console.log("courses")
-  console.log(courses);
   if(courses.length == 0){
     //If there are none, seed them with the defaults...
     const defaultCourses = [
@@ -205,6 +216,7 @@ app.get("/api/v1/courses", requireAuth(), async (req, res)=>{
 })
 
 app.get("/api/v1/studentCourses", requireAuth("student"), async (req, res) => {
+  console.log("getting student's courses") //student
   const tenant = getTenant(req.connection.localPort);
   const user = req.user;
   
@@ -212,39 +224,45 @@ app.get("/api/v1/studentCourses", requireAuth("student"), async (req, res) => {
     return res.status(401).json({ error: "User not found" });
   }
 
-  const courses = await Course.find({ tenantId: tenant.id, students: user.studentId });
+  const courses = await Course.find({ tenantId: tenant.id }, "display id students");
+  const studentCourses = courses.map((course) => {
+    return {
+      id: course.id,
+      display: course.display,
+      isEnrolled: course.students.includes(req.user.studentId)
+    };
+  });
   
   if (!courses || courses.length === 0) {
-    return res.status(404).json({ message: "No courses found for this student." });
+    return res.status(404).json({ message: "No courses found." });
   }
 
-  res.json(courses);
+  res.json(studentCourses);
 });
 
 
 app.get("/api/v1/teacher_courses", requireAuth("teacher"), async (req, res)=>{
+  console.log("getting teacher's courses") //teacher
   const tenant = getTenant(req.connection.localPort);
-  const courses = await Course.find({tenantId:tenant.id,userId:req.user.id})
+  const courses = await Course.find({tenantId:tenant.id,userId:req.user._id})
   res.json(courses);
 })
 
 app.get("/api/v1/users", requireAuth("admin"), async (req, res)=>{
+  console.log("getting users") //admin
   const tenant = getTenant(req.connection.localPort);
-  console.log("tenant: "+tenant);
   const users = await User.find({tenantId:tenant.id});
-  console.log("users");
-  console.log(users)
   const userData = users.map(({ studentId, username, role }) => ({
     studentId,
     username,
     role
   }));
-  console.log(users)
   res.json(userData);
 })
 
 app.get("/api/v1/students", requireAuth('teacher'), async (req, res) => {
   try {
+    console.log("getting students") //teacher
     const tenant = getTenant(req.connection.localPort);
     const students = await User.find({ tenantId: tenant.id, role: 'student' }, 'studentId username role');
     res.json(students);
@@ -256,7 +274,7 @@ app.get("/api/v1/students", requireAuth('teacher'), async (req, res) => {
 
 
 app.post("/api/v1/user", requireAuth('admin'), async (req, res) => {
-  console.log("Creating new user...");
+  console.log("Creating new user..."); //admin
   
   const { studentId, username, role, password } = req.body;
   
@@ -283,13 +301,17 @@ app.post("/api/v1/user", requireAuth('admin'), async (req, res) => {
   }
 });
 
-app.post("/api/v1/course/:courseId/addStudent", requireAuth('teacher'), async (req, res) => {
-  const { studentId } = req.body;
+app.post("/api/v1/course/:courseId/addStudent", requireAuth('teacher','student'), async (req, res) => {
+  console.log("adding student to course") //teacher, student
+  let { studentId } = req.body;
   const { courseId } = req.params;
   const tenant = getTenant(req.connection.localPort);
 
   if (!studentId) {
-    return res.status(400).json({ error: 'Missing studentId' });
+    if(!req.user.studentId){
+      return res.status(400).json({ error: 'Missing studentId' });
+    }
+    studentId = req.user.studentId;
   }
 
   const course = await Course.findOne({ id: courseId, tenantId: tenant.id });
@@ -305,13 +327,17 @@ app.post("/api/v1/course/:courseId/addStudent", requireAuth('teacher'), async (r
   res.json(course);
 });
 
-app.post("/api/v1/course/:courseId/removeStudent", requireAuth('teacher'), async (req, res) => {
-  const { studentId } = req.body;
+app.post("/api/v1/course/:courseId/removeStudent", requireAuth('teacher','student'), async (req, res) => {
+  console.log("removing student from course") //student
+  let { studentId } = req.body;
   const { courseId } = req.params;
   const tenant = getTenant(req.connection.localPort);
 
   if (!studentId) {
-    return res.status(400).json({ error: 'Missing studentId' });
+    if(!req.user.studentId){
+      return res.status(400).json({ error: 'Missing studentId' });
+    }
+    studentId = req.user.studentId;
   }
 
   const course = await Course.findOne({ id: courseId, tenantId: tenant.id });
@@ -326,6 +352,7 @@ app.post("/api/v1/course/:courseId/removeStudent", requireAuth('teacher'), async
 });
 
 app.get("/api/v1/courses/:courseId/students", requireAuth("teacher"), async (req, res) => {
+  console.log("getting students in course") //teacher
   const courseId = req.params.courseId;
   const tenant = getTenant(req.connection.localPort);
 
@@ -411,32 +438,54 @@ async function seedUserDB(){
   })
 }
 
-function requireAuth(requiredRole = null) {
+function requireAuth(...allowedRoles) {
   return async function (req, res, next) {
-    console.log("checking auth...");
+    const wantsJson = req.headers.accept && req.headers.accept.includes('application/json');
 
     // Authenticate
     if (!req.cookies.authToken) {
       console.log("no authToken...");
-      return res.status(401).json({ error: 'No authToken' });
+      if (wantsJson) {
+        return res.status(401).json({ error: 'No authToken' });
+      } else {
+        return res.redirect('/login.html');
+      }
     }
 
     const user = await User.findOne({ username: req.cookies.authToken });
 
     if (!user) {
       console.log("no such user...");
-      return res.status(401).json({ error: 'Invalid authToken' });
+      if (wantsJson) {
+        return res.status(401).json({ error: 'Invalid authToken' });
+      } else {
+        return res.redirect('/login.html');
+      }
+    }
+
+    //Check Tenant
+    const tenant = getTenant(req.connection.localPort);
+    if(user.tenantId != tenant.id){
+      console.log("Incorrect tenant...");
+      if (wantsJson) {
+        return res.status(401).json({ error: 'Invalid tenantId, login on the correct url.' });
+      } else {
+        return res.redirect('/login.html');
+      }
     }
 
     // Authorize
-    if (requiredRole && user.role !== requiredRole) {
-      console.log(`User role ${user.role} not authorized for ${requiredRole}`);
-      return res.status(403).json({ error: 'Forbidden' });
+    if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+      console.log(`User role ${user.role} not authorized for ${req.originalUrl}`);
+      if (wantsJson) {
+        return res.status(403).json({ error: 'Forbidden' });
+      } else {
+        return res.redirect('/login.html');
+      }
     }
 
     req.user = user;
 
-    console.log("continuing with request...");
     next();
   };
 }
